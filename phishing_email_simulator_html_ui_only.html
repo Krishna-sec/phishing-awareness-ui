@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Phishing Email Simulator — UI (No backend)</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#60a5fa; --danger:#f87171; --safe:#34d399;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial; margin:0; background:linear-gradient(180deg,#071029 0%, #071421 60%); color:#e6eef8; padding:28px}
+    header{display:flex;gap:16px;align-items:center; margin-bottom:20px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .toolbar{display:flex;gap:8px;margin-left:auto}
+    .btn{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;color:inherit;cursor:pointer;font-size:13px}
+    .btn.ghost{background:transparent}
+
+    .layout{display:grid;grid-template-columns:1fr 380px;gap:18px}
+
+    /* main card */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+
+    /* emails container */
+    .emails{display:flex;gap:14px}
+    .email{flex:1;background:rgba(255,255,255,0.01); padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    .email .meta{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .avatar{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#1f2937,#111827);display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:600}
+    .meta .from{font-weight:600}
+    .meta .small{color:var(--muted);font-size:13px}
+
+    .subject{font-size:17px;font-weight:700;margin:8px 0}
+    .body{line-height:1.6;color:#d8e8ff}
+    .footer{margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* suspicious markers */
+    .suspect{position:relative}
+    .suspect::after{content:"";position:absolute;inset:0;border-radius:6px;display:none}
+    .highlight .suspect::after{display:block;border:2px dashed var(--danger);mix-blend-mode:screen}
+    .safe .safe-marker{display:inline-block;padding:2px 6px;border-radius:6px;background:rgba(52,211,153,0.12);color:var(--safe);font-size:12px;margin-left:6px}
+
+    /* tooltip */
+    .hint{display:inline-block;background:rgba(0,0,0,0.5);color:var(--muted);padding:6px 8px;border-radius:6px;margin-left:8px;font-size:12px}
+
+    /* comparison column */
+    .compare h3{margin-top:0}
+    .compare ol{padding-left:18px;color:var(--muted)}
+    .compare li{margin:10px 0}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}
+    .danger{background:rgba(248,113,113,0.12);color:var(--danger);border:1px solid rgba(248,113,113,0.06)}
+    .ok{background:rgba(52,211,153,0.08);color:var(--safe);border:1px solid rgba(52,211,153,0.05)}
+
+    /* small responsive */
+    @media (max-width:940px){.layout{grid-template-columns:1fr}.emails{flex-direction:column}}
+
+    /* subtle code block for raw headers */
+    pre{background:#021124;padding:10px;border-radius:8px;color:var(--muted);font-size:13px;overflow:auto}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Phishing Email Simulator — UI</h1>
+      <p class="lead">A static UI that shows a fake phishing email beside a safe email. Click the buttons to highlight suspicious elements and compare.</p>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" id="toggleHigh">Show suspicious highlights</button>
+      <button class="btn ghost" id="toggleSafe">Show safe tips</button>
+      <button class="btn ghost" id="reset">Reset</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="emails">
+
+        <!-- Phishing email (left) -->
+        <article class="email" id="phish">
+          <div class="meta">
+            <div class="avatar">Ph</div>
+            <div>
+              <div class="from">Amazon Accounts &lt;support@amazn-security.com&gt;</div>
+              <div class="small">to: you@example.com — 3:14 AM</div>
+            </div>
+          </div>
+
+          <div class="subject">Important: Verify your Amazon account immediately</div>
+
+          <div class="body">
+            <p class="suspect" data-tip="Sender address is slightly off (misspelling) — common phishing sign.">Dear customer,</p>
+
+            <p class="suspect" data-tip="Generic greeting instead of your actual name.">We detected unusual activity on your account. Please <span class="suspect" data-tip="Link points to a spoof domain." data-url="http://amazn-secure-login.example.com">click here to verify your account</span> within 24 hours to avoid suspension.</p>
+
+            <p class="suspect" data-tip="Threatening language to cause urgency.">If you do not verify, your account will be suspended.</p>
+
+            <p>Regards,<br><strong>Amazon Security Team</strong></p>
+
+            <div class="footer suspect" data-tip="Email footer contains only images or minimal contact info.">
+              Amazon Web Services — 1234 Market St
+            </div>
+
+            <!-- hidden raw headers to inspect -->
+            <details style="margin-top:10px;background:rgba(255,255,255,0.01);padding:8px;border-radius:8px">
+              <summary style="cursor:pointer;color:var(--muted)">View raw headers</summary>
+              <pre>
+Received: from mail.example.com (unknown [198.51.100.23])
+From: "Amazon Accounts" &lt;support@amazn-security.com&gt;
+Reply-To: support@amazn-support.com
+Return-Path: <bounce@tracker.example>
+              </pre>
+            </details>
+          </div>
+        </article>
+
+        <!-- Safe email (right) -->
+        <article class="email" id="safe">
+          <div class="meta">
+            <div class="avatar">AM</div>
+            <div>
+              <div class="from">Amazon &lt;no-reply@amazon.com&gt;<span class="safe-marker">Verified</span></div>
+              <div class="small">to: you@example.com — 9:02 AM</div>
+            </div>
+          </div>
+
+          <div class="subject">Your Amazon order #123-4567890 has shipped</div>
+
+          <div class="body">
+            <p>Hello Krishna,</p>
+            <p>Your order has been shipped. Track it using the link in your order history or by visiting <span class="safe-marker">amazon.com/orders</span>.</p>
+            <p class="footer">If you did not place this order, contact our support: <span class="safe-marker">support@amazon.com</span></p>
+
+            <details style="margin-top:10px;background:rgba(255,255,255,0.01);padding:8px;border-radius:8px">
+              <summary style="cursor:pointer;color:var(--muted)">View raw headers</summary>
+              <pre>
+Received: from mx.amazon.com (mx.amazon.com [54.240.0.0])
+From: "Amazon" &lt;no-reply@amazon.com&gt;
+Reply-To: support@amazon.com
+Return-Path: <mailer-daemon@amazon.com>
+              </pre>
+            </details>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- small how-to below the emails -->
+      <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <strong>How to use</strong>
+          <p style="color:var(--muted);font-size:13px;margin:6px 0">Click <em>Show suspicious highlights</em> to outline elements that are commonly used in phishing emails (spoofed sender, suspicious links, urgent language). Click <em>Show safe tips</em> to add safe markers to the legitimate email.</p>
+        </div>
+
+        <div style="width:260px;min-width:200px">
+          <strong>Checklist (quick)</strong>
+          <ol style="color:var(--muted);font-size:13px;margin:6px 0;padding-left:18px">
+            <li>Check the sender's email closely</li>
+            <li>Hover before you click — inspect the link</li>
+            <li>Watch for urgent or threatening language</li>
+            <li>Look for typos and poor grammar</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- comparison / explanation column -->
+    <aside class="card compare">
+      <h3>Safe vs Unsafe — Quick Comparison</h3>
+
+      <ol>
+        <li><span class="badge danger">Unsafe</span> Misspelled or spoofed sender domain (e.g., <code>amazn-security.com</code>) — <span class="badge ok">Safe</span> Verified domain with consistent reply-to and return-path.</li>
+        <li><span class="badge danger">Unsafe</span> Links that point to different domains or long redirectors — <span class="badge ok">Safe</span> Links point to the official domain; use order history for tracking instead of in-email link.</li>
+        <li><span class="badge danger">Unsafe</span> Urgency, threats, or countdown timers — <span class="badge ok">Safe</span> Neutral, informative language and contact info.
+        </li>
+        <li><span class="badge danger">Unsafe</span> Generic greetings ("Dear customer") — <span class="badge ok">Safe</span> Personalized greetings with your name.</li>
+        <li><span class="badge danger">Unsafe</span> Request for credentials or sensitive info — <span class="badge ok">Safe</span> Legitimate companies never ask for passwords via email.</li>
+      </ol>
+
+      <h4 style="margin-top:14px">Inspector</h4>
+      <p style="color:var(--muted);font-size:13px">Click any suspicious-marked text in the phishing email to read a short tip explaining why it's suspicious.</p>
+
+      <div id="inspector" style="margin-top:8px;background:rgba(255,255,255,0.01);padding:12px;border-radius:8px;color:var(--muted);min-height:80px">No selection</div>
+
+      <h4 style="margin-top:12px">Raw header notes</h4>
+      <p style="color:var(--muted);font-size:13px">Compare Received / Return-Path / From / Reply-To for mismatches. Attackers often use reply-to or return-path to channel responses elsewhere.</p>
+    </aside>
+  </main>
+
+  <script>
+    // JS to add interactivity: highlight suspicious elements and show inspector tips
+    const phish = document.getElementById('phish');
+    const safe = document.getElementById('safe');
+    const toggleHigh = document.getElementById('toggleHigh');
+    const toggleSafe = document.getElementById('toggleSafe');
+    const reset = document.getElementById('reset');
+    const inspector = document.getElementById('inspector');
+
+    // Collect elements with data-tip (suspicious markers)
+    const suspects = phish.querySelectorAll('[data-tip]');
+
+    function setInspector(text){ inspector.textContent = text || 'No selection'; }
+
+    // Clicking a suspicious element shows the tip
+    suspects.forEach(el => {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', e => {
+        const tip = el.getAttribute('data-tip') || 'Suspicious item';
+        const url = el.getAttribute('data-url');
+        setInspector(tip + (url ? ('\n\nLink preview: ' + url) : ''));
+      });
+    });
+
+    // Toggle highlight: adds .highlight class to the phish article
+    let highlighted = false;
+    toggleHigh.addEventListener('click', () => {
+      highlighted = !highlighted;
+      phish.classList.toggle('highlight', highlighted);
+      toggleHigh.textContent = highlighted ? 'Hide suspicious highlights' : 'Show suspicious highlights';
+      if(!highlighted) setInspector('No selection');
+    });
+
+    // Toggle safe markers: add .safe class to the safe article to show markers
+    let safeShown = false;
+    toggleSafe.addEventListener('click', () => {
+      safeShown = !safeShown;
+      safe.classList.toggle('safe', safeShown);
+      toggleSafe.textContent = safeShown ? 'Hide safe tips' : 'Show safe tips';
+    });
+
+    // Reset both
+    reset.addEventListener('click', () => {
+      phish.classList.remove('highlight');
+      safe.classList.remove('safe');
+      highlighted = false; safeShown = false;
+      toggleHigh.textContent = 'Show suspicious highlights';
+      toggleSafe.textContent = 'Show safe tips';
+      setInspector('No selection');
+    });
+
+    // also clicking anywhere outside clears inspector
+    document.addEventListener('click', (e) => {
+      if(!phish.contains(e.target) && !e.target.matches('[data-tip]')){
+        setInspector('No selection');
+      }
+    });
+  </script>
+</body>
+</html>
